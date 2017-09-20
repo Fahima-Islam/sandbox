@@ -57,3 +57,35 @@ def convolve(Iin,k,opt):
 		return(Rr)
 	if opt=='same':
 		return(Sr)
+
+import convolutionF as F
+def deconvolve(sig,mask,option,value):
+	sig0=sig
+	mask_mir=mask[::-1]
+	m_tst=F.convolve(sig,mask,'same')
+	deconv = 0.5*np.ones(len(m_tst))
+
+	if option=='iteration':
+		error=0
+		for i in xrange(value):
+    			sigC=F.convolve(deconv,mask,'same')
+    			relative_blur=sig0/sigC
+    			deconvP=deconv*F.convolve(relative_blur,mask_mir,'same')
+			error=np.abs(deconvP-deconv)
+                        deconv=deconvP
+		print('error achieved: {}'.format(error))
+
+	if option=='error':
+		it=0
+		while True:
+    			sigC=F.convolve(deconv,mask,'same')
+    			relative_blur=sig0/sigC
+    			deconvP=deconv*F.convolve(relative_blur,mask_mir,'same')
+    			error=np.abs(deconvP-deconv)
+    			deconv=deconvP
+			it=it+1
+			#print('number of iteration: {}'.format(it))
+			if np.all(error<value):
+				break
+		print('number of iteration: {}'.format(it))
+	return(deconv)
