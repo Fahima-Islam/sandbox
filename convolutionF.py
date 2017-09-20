@@ -59,30 +59,40 @@ def convolve(Iin,k,opt):
 		return(Sr)
 
 import convolutionF as F
-def deconvolve(sig,mask,option,value):
+def deconvolve(sig,mask,deconV,conv,option,value):
 	sig0=sig
 	mask_mir=mask[::-1]
-	m_tst=F.convolve(sig,mask,'same')
-	deconv = 0.5*np.ones(len(m_tst))
+	m_tst=F.convolve(sig,mask,conv)
+	deconv = deconV
+	
+	def main(deconv,mask,sig0,mask_mir,conv):
+		sigC=F.convolve(deconv,mask,conv)
+		relative_blur=sig0/sigC
+		deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
+		error=np.abs(deconvP-deconv)
+		deconv=deconvP
+		return(deconv,error)
 
 	if option=='iteration':
-		error=0
+		error=0		
 		for i in xrange(value):
-    			sigC=F.convolve(deconv,mask,'same')
-    			relative_blur=sig0/sigC
-    			deconvP=deconv*F.convolve(relative_blur,mask_mir,'same')
-			error=np.abs(deconvP-deconv)
-                        deconv=deconvP
+			deconv,error=main(deconv,mask,sig0,mask_mir,conv)
+    			#sigC=F.convolve(deconv,mask,conv)
+    			#relative_blur=sig0/sigC
+    			#deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
+			#error=np.abs(deconvP-deconv)
+                        #deconv=deconvP
 		print('error achieved: {}'.format(error))
 
 	if option=='error':
 		it=0
 		while True:
-    			sigC=F.convolve(deconv,mask,'same')
-    			relative_blur=sig0/sigC
-    			deconvP=deconv*F.convolve(relative_blur,mask_mir,'same')
-    			error=np.abs(deconvP-deconv)
-    			deconv=deconvP
+			deconv,error=main(deconv,mask,sig0,mask_mir,conv)
+    			#sigC=F.convolve(deconv,mask,conv)
+    			#relative_blur=sig0/sigC
+    			#deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
+    			#error=np.abs(deconvP-deconv)
+    			#deconv=deconvP
 			it=it+1
 			#print('number of iteration: {}'.format(it))
 			if np.all(error<value):
