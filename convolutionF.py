@@ -68,6 +68,8 @@ def deconvolve(sig,mask,deconV,conv,option,value):
 	def main(deconv,mask,sig0,mask_mir,conv):
 		sigC=F.convolve(deconv,mask,conv)
 		relative_blur=sig0/sigC
+		with np.errstate(divide='ignore'):
+			relative_blur[np.isinf(relative_blur)] = -2
 		deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
 		error=np.abs(deconvP-deconv)
 		deconv=deconvP
@@ -82,7 +84,7 @@ def deconvolve(sig,mask,deconV,conv,option,value):
     			#deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
 			#error=np.abs(deconvP-deconv)
                         #deconv=deconvP
-		print('error achieved: {}'.format(error))
+		#print('error achieved: {}'.format(error))
 
 	if option=='error':
 		it=0
@@ -99,3 +101,68 @@ def deconvolve(sig,mask,deconV,conv,option,value):
 				break
 		print('number of iteration: {}'.format(it))
 	return(deconv)
+
+import convolutionF as F
+def deconvolve_TV(sig,mask,deconV,conv,eps,rgP,option,value):
+        sig0=sig
+        mask_mir=mask[::-1]
+        m_tst=F.convolve(sig,mask,conv)
+        deconv = deconV
+
+        def main(deconv,mask,sig0,mask_mir,conv,eps,rgP):
+                sigC=F.convolve(deconv,mask,conv)
+                relative_blur=sig0/sigC
+                with np.errstate(divide='ignore'):
+                        relative_blur[np.isinf(relative_blur)] = -2
+		grad=np.gradient(deconv)
+		#grad=np.diff(deconv)
+		#norm=np.linalg.norm(grad, ord=1)
+		norm=np.sqrt(grad**2)
+		mod_norm=np.sqrt(eps**2+norm**2)
+		division=(grad)/mod_norm
+		division[np.isnan(division)] = 0.0
+		with np.errstate(divide='ignore'):
+			division[np.isinf(division)] = -2
+		#divergence=np.sum(np.gradient(division))
+		divergence=np.gradient(division)
+		div_rgp=rgP*divergence
+		#if np.any(div_rgp>1):
+		#mask=(div_rgp)>1
+		#div_rgp[:][mask]=divergence[mask]
+		#mask2=(1-div_rgp)<0.02
+		#div_rgp[:][mask2]=(rgP/3)*(divergence[mask2])
+		#div_rgp[np.any(abs(div_rgp)>1)]=divergence
+			#rgp=divergence/divergence
+		#div_rgp=rgP*division
+		deconvP=(deconv/(1-(div_rgp)))*F.convolve(relative_blur,mask_mir,conv)
+		error=np.abs(deconvP-deconv)
+		deconv=deconvP
+		return(deconv,error)
+
+        if option=='iteration':
+                error=0         
+                for i in xrange(value):
+                        deconv,error=main(deconv,mask,sig0,mask_mir,conv,eps,rgP)
+                        #sigC=F.convolve(deconv,mask,conv)
+                        #relative_blur=sig0/sigC
+                        #deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
+                        #error=np.abs(deconvP-deconv)
+                        #deconv=deconvP
+                #print('error achieved: {}'.format(error))
+
+        if option=='error':
+                it=0
+                while True:
+                        deconv,error=main(deconv,mask,sig0,mask_mir,conv,eps,rgP)
+                        #sigC=F.convolve(deconv,mask,conv)
+                        #relative_blur=sig0/sigC
+                        #deconvP=deconv*F.convolve(relative_blur,mask_mir,conv)
+                        #error=np.abs(deconvP-deconv)
+                        #deconv=deconvP
+                        it=it+1
+                        #print('number of iteration: {}'.format(it))
+                        if np.all(error<value):
+                                break
+                print('number of iteration: {}'.format(it))
+        return(deconv)
+
